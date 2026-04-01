@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-readonly TITLE="🚀 T3 Gemstone Software Development Kit"
+readonly TITLE="🚀 TI AM67A EdgeAI"
 readonly DOCS_URL="https://docs.t3gemstone.org"
 readonly COMMUNITY_URL="https://community.t3gemstone.org"
 
@@ -25,8 +25,8 @@ readonly CLEAR_LAST_MSG="\033[1F\033[0K"
 
 readonly DESCRIPTION=$(
     cat <<EOF
-  This script downloads and installs T3 Gemstone Boards' required packages 📦 for the development of its customized GNU/Linux Distro.
-  Powered by Jetify Devbox, Distrobox, ${BOLD}Love${NO_COLOR} and ${BOLD}Passion${NO_COLOR}.
+  This script downloads and installs T3 Gemstone Boards' required packages 📦 for the build of TI AM67A EdgeAI packages
+  Powered by Jetify Devbox, ${BOLD}Love${NO_COLOR} and ${BOLD}Passion${NO_COLOR}.
 EOF
 )
 
