@@ -12,6 +12,7 @@ RUN apt-get update && \
     apt-get install -y \
         automake \
         bash \
+        bash-completion \
         binfmt-support \
         bison \
         build-essential \
@@ -118,5 +119,8 @@ RUN pip3 install meson pybind11 numpy packaging
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo \
     && chmod a+x /usr/local/bin/repo
+
+COPY .bash_completion.d/* /etc/bash_completion.d/
+RUN echo "source /etc/bash_completion" >> /etc/bash.bashrc
 
 CMD ["bash"]

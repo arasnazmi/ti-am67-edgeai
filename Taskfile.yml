@@ -35,12 +35,14 @@ tasks:
 
 
   build:vision_lib:
+    desc: Build vision library for AM67A
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/init_setup.sh
       - cd $WORKDIR/workarea/sdk/sdk_builder && SOC=j722s BASE_IMAGE=ubuntu:22.04 ./vision_apps_build.sh
 
   build:onnxrt:
+    desc: Build ONNX Runtime for AM67A
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/onnxrt_prepare.sh
@@ -48,6 +50,7 @@ tasks:
       - $WORKDIR/scripts/onnxrt_package.sh
 
   build:tflite:
+    desc: Build TensorFlow Lite for AM67A
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/tflite_prepare.sh
@@ -56,12 +59,14 @@ tasks:
       - $WORKDIR/scripts/tflite_package.sh
 
   build:dlr:
+    desc: Build DLR for AM67A
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/dlr_prepare.sh
       - $WORKDIR/scripts/dlr_build.sh
       - $WORKDIR/scripts/dlr_package.sh
   build:tidl:
+    desc: Build TIDL for AM67A
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/tidl_prepare.sh
@@ -69,31 +74,37 @@ tasks:
       - $WORKDIR/scripts/tidl_package.sh
 
   install:debs:
+    desc: Install debs
     cmds:
       - dpkg -i $WORKDIR/out/*.deb
 
   install:whls:
+    desc: Install whls
     cmds:
       - pip3 install $WORKDIR/out/*.whl
 
   install:all:
+    desc: Install all debs and whls
     cmds:
       - task install:debs
       - task install:whls
       - ldconfig
 
   build:edgeai_debs:
+    desc: Build edgeai debs
     cmds:
       - $WORKDIR/scripts/edgeai_prepare.sh
       - $WORKDIR/scripts/edgeai_build_debs.sh
 
   build:v4l2:
+    desc: Build v4l2 driver for AM67A
     cmds:
       - $WORKDIR/scripts/v4l2_prepare.sh
       - $WORKDIR/scripts/v4l2_build.sh
       - $WORKDIR/scripts/v4l2_package.sh
 
   build:gstreamer:
+    desc: Build gstreamer core and plugins for AM67A
     cmds:
       - $WORKDIR/scripts/gstreamer_prepare.sh
       - $WORKDIR/scripts/gstreamer_build.sh
@@ -101,12 +112,14 @@ tasks:
       - task install:debs
     
   build:rpmsg:
+    desc: Build RPMsg for AM67A
     cmds:
       - $WORKDIR/scripts/rpmsg_prepare.sh
       - $WORKDIR/scripts/rpmsg_build.sh
       - $WORKDIR/scripts/rpmsg_package.sh
 
   build:t3_edgeai_dev:
+    desc: Build t3_edgeai_dev package for AM67A
     cmds:
       - $WORKDIR/scripts/t3_edgeai_dev_package.sh
     

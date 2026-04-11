@@ -12,7 +12,7 @@
       "source <(task --completion $(basename $SHELL))",
       "source $DEVBOX_PACKAGES_DIR/share/vcstool-completion/vcs.$(basename $SHELL)",
       "export PS1='📦 devbox:\\[\\033[01;34m\\]\\W\\[\\033[00m\\]> '",
-      "WORKDIR=$DEVBOX_PROJECT_ROOT HOME=$DEVBOX_PROJECT_ROOT/.distrobox source $DEVBOX_PROJECT_ROOT/.distrobox/.bash_aliases",
+      "WORKDIR=$DEVBOX_PROJECT_ROOT",
       "DEVBOX_ENV_FILE=$DEVBOX_PROJECT_ROOT/.devbox/.env",
       "touch $DEVBOX_ENV_FILE && source $DEVBOX_ENV_FILE"
     ]
