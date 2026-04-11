@@ -114,7 +114,7 @@ RUN wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_${AR
     -O /usr/local/bin/yq && \
     chmod +x /usr/local/bin/yq
 
-RUN pip3 install meson pybind11 numpy
+RUN pip3 install meson pybind11 numpy packaging
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo \
     && chmod a+x /usr/local/bin/repo
