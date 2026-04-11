@@ -124,6 +124,14 @@ install_docker() {
     end_task docker
 }
 
+install_qemu_packages() {
+    start_task "qemu packages"
+    sudo apt-get update
+    sudo apt-get install -y qemu binfmt-support qemu-user-static
+    success
+    end_task "qemu packages"
+}
+
 set_docker_perms() {
     start_task docker-permissions
 
@@ -169,6 +177,7 @@ main() {
     delay 3
     check_requirements
     install_docker
+    install_qemu_packages
     set_docker_perms
     install_devbox
     next_steps_msg
