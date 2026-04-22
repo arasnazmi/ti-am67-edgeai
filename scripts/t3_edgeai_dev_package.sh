@@ -26,13 +26,14 @@ PKG_MAINTAINER="T3 Gemstone Project Development Team <support@t3gemstone.org>"
 PKG_DEPENDS="arm-tidl-j722s, edgeai-apps-utils, edgeai-dl-inferer, edgeai-tiovx-kernels, \
 edgeai-tiovx-modules, t3-gstreamer, edgeai-gst-plugins, t3-libtensorflow-lite-dev, \
 libti-vision-apps-j722s, t3-onnxruntime, ti-rpmsg-char, t3-v4l2-utils, libyaml-cpp-dev, \
-libopencv-dev, libncurses-dev, python3-pip, libegl1, libgles2, libgbm1, libgudev-1.0-0"
+libopencv-dev, libncurses-dev, python3-pip, libegl1, libgles2, libgbm1, libgudev-1.0-0, \
+python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, gir1.2-gst-plugins-base-1.0"
 
 . /etc/os-release
 OS_NAME="${ID}_${VERSION_ID//./_}"
 
-DST_DIR="${WORKAREA}/t3-edgeai-dev-${OS_NAME}_aarch64"
-DEB_NAME="t3-edgeai-dev-${OS_NAME}_aarch64.deb"
+DST_DIR="${WORKAREA}/t3-gem-o1-edgeai-${OS_NAME}_aarch64"
+DEB_NAME="t3-gem-o1-edgeai-${OS_NAME}_aarch64.deb"
 
 if [ ! -d "${APP_STACK_DIR}" ]; then
     log_error "edgeai-app-stack directory not found: ${APP_STACK_DIR}"
@@ -48,7 +49,7 @@ fi
 
 SECONDS=0
 
-log_info "Assembling t3-edgeai-dev package..."
+log_info "Assembling t3-gem-o1-edgeai package..."
 log_info "App stack  : ${APP_STACK_DIR}"
 log_info "Staging dir: ${DST_DIR}"
 log_info "Output dir : ${OUT_DIR}"
@@ -69,6 +70,7 @@ cp -r "${APP_STACK_DIR}/edgeai-gst-apps"   "${DST_DIR}/opt/"
 cp -r "${APP_STACK_DIR}/edgeai-test-data"  "${DST_DIR}/opt/"
 cp -r "${APP_STACK_DIR}/imaging"           "${DST_DIR}/opt/"
 cp -r "${APP_STACK_DIR}/vision_apps"       "${DST_DIR}/opt/"
+cp -r "${APP_STACK_DIR}/edgeai-dl-inferer" "${DST_DIR}/opt/"
 cp    "${APP_STACK_DIR}/vx_app_arm_remote_log.out" "${DST_DIR}/opt/"
 log_success "App stack assets copied."
 
@@ -89,6 +91,7 @@ export CPLUS_INCLUDE_PATH=/usr/local/include/gstreamer-1.0:${CPLUS_INCLUDE_PATH:
 export LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:${LIBRARY_PATH:-}
 export LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:${LD_LIBRARY_PATH:-}
 export GST_PLUGIN_PATH=/usr/local/lib/aarch64-linux-gnu/gstreamer-1.0
+export PYTHONPATH=/opt/edgeai-dl-inferer/dl_inferer_python:$PYTHONPATH
 export EDGEAI_GST_APPS_PATH=/opt/edgeai-gst-apps
 export OOB_DEMO_ASSETS_PATH=/opt/oob-demo-assets
 export MODEL_ZOO_PATH=/opt/model_zoo
@@ -106,7 +109,7 @@ log_success "t3-edgeai-env written."
 
 log_info "Writing DEBIAN/control..."
 cat > "${DST_DIR}/DEBIAN/control" <<EOF
-Package: t3-edgeai-dev
+Package: t3-gem-o1-edgeai
 Version: ${PKG_VERSION}
 Section: misc
 Priority: optional
@@ -122,6 +125,8 @@ cat > "${DST_DIR}/DEBIAN/postinst" <<'EOF'
 #!/bin/bash
 set -e
 pip3 install /opt/whl_packages/*.whl
+pip3 install pyyaml opencv-python
+mkdir -p /opt/edgeai-test-data/output
 exit 0
 EOF
 chmod 755 "${DST_DIR}/DEBIAN/postinst"
