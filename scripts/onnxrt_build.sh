@@ -16,7 +16,7 @@ source "${UTILS_SCRIPT}"
 
 ONNX_DIR="${WORKDIR}/workarea/onnxruntime"
 
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 protobuf_ver=$(get_yaml_value "onnxruntime" "protobuf_ver")
 if [ -z "${protobuf_ver}" ]; then

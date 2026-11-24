@@ -21,7 +21,7 @@ PKG_VERSION="11.0.0"
 PKG_ARCHITECTURE="arm64"
 PKG_MAINTAINER="T3 Gemstone Project Development Team <support@t3gemstone.org>"
 PKG_DESCRIPTION="T3 Gemstone Project - Edge AI Utilities and Modules"
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 CMAKE_PROJECTS=(
     "edgeai-apps-utils"
@@ -134,7 +134,7 @@ log_info "[2/4] Running Meson configuration..."
 
 meson setup build --prefix=/usr/local -Dpkg_config_path=pkgconfig
 log_info "[3/4] Compiling with Ninja..."
-ninja -C build
+ninja -C build -j"${NPROC}"
 
 log_info "[4/4] Installing into staging directory..."
 mkdir -p "${GST_DEB_DIR}/DEBIAN"

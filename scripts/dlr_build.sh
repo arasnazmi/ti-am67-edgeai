@@ -15,7 +15,7 @@ if [ -z "${WORKDIR:-}" ]; then
     exit 1
 fi
 
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 TIDL_RT_PATH=$(readlink -f "${WORKDIR}/workarea/arm-tidl/rt")
 BUILD_DIR="${WORKDIR}/workarea/neo-ai-dlr/build"

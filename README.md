@@ -78,3 +78,20 @@ To remove a Docker image, execute the destroy command.
 ```bash
 root@host:~ task destroy
 ```
+
+#### 3. Segmentation Faults on x86 Hosts
+
+On an x86 host the arm64 build container runs under QEMU, which causes two kinds of crashes:
+
+- QEMU gives every process a fixed 8 MiB stack. GCC needs more for some C++ files and fails with
+  `internal compiler error: Segmentation fault`. The Dockerfile raises the limit with `QEMU_STACK_SIZE`.
+- `task` 3.50.0 (built with Go 1.26) randomly segfaults or hangs under QEMU. The Dockerfile pins `task` 3.44.1, which does not.
+
+Rebuild the image (`task box`) after updating. Builds on native arm64 machines, such as CI, are not affected.
+
+Builds use one compile job per CPU, capped at one per 2 GiB of free RAM. To use fewer, start the container with `NPROC=<n> task box`.
+
+# Continuous Integration
+
+`.github/workflows/build.yml` builds all packages on native arm64 GitHub runners, one runner per component, with ccache.
+The packages are uploaded as the `ti-am67-edgeai-packages` artifact. Pushing a tag also publishes them as a GitHub release.

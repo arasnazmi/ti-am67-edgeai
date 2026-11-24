@@ -5,6 +5,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV WORKDIR=/root
 ENV SOC=j722s
 
+# When this arm64 image runs on an x86 host, every process runs under
+# qemu-user, which gives the guest a fixed 8 MiB stack and ignores setrlimit().
+# GCC raises its own stack limit to 64 MiB on native hosts; under QEMU it
+# cannot, so cc1plus dies with "internal compiler error: Segmentation fault"
+# on deeply nested C++. Give QEMU a 64 MiB stack. Ignored on native arm64.
+ENV QEMU_STACK_SIZE=67108864
+
 ARG ARCH=arm64
 
 RUN apt-get update && \
@@ -61,9 +68,6 @@ RUN apt-get update && \
         python3-pexpect \
         python3-pip \
         python3-subunit \
-        qemu-system-arm \
-        qemu-user \
-        qemu-user-static \
         sed \
         socat \
         software-properties-common \
@@ -90,7 +94,7 @@ RUN apt-get install -y \
     cmake=3.29.6-0kitware1ubuntu22.04.1 \
     cmake-data=3.29.6-0kitware1ubuntu22.04.1
 
-RUN git clone git://git.ti.com/rpmsg/ti-rpmsg-char.git \
+RUN git clone https://git.ti.com/git/rpmsg/ti-rpmsg-char.git \
     --branch 0.6.7 --depth 1 --single-branch && \
     cd ti-rpmsg-char && \
     autoreconf -i && ./configure --host=aarch64-none-linux-gnu --prefix=/usr && \
@@ -102,8 +106,12 @@ RUN sed -i 's/pam_unix\.so obscure/pam_unix.so minlen=1 obscure/' /etc/pam.d/com
 RUN echo gemstone > /etc/hostname
 
 # Taskfile Installation
-RUN curl --location https://github.com/go-task/task/releases/download/v3.50.0/task_3.50.0_linux_arm64.deb --output ~/task_3.50.0_linux_arm64.deb && \
-    sudo apt install ~/task_3.50.0_linux_arm64.deb && \
+# Pinned to 3.44.1 (Go 1.24). Under qemu-user, i.e. on x86 hosts, 3.50.0
+# (Go 1.26) randomly segfaults, panics or deadlocks; 3.44.1 does not.
+RUN curl -fsSL https://github.com/go-task/task/releases/download/v3.44.1/task_linux_arm64.deb \
+        --output /tmp/task_linux_arm64.deb && \
+    apt-get install -y /tmp/task_linux_arm64.deb && \
+    rm /tmp/task_linux_arm64.deb && \
     task --completion bash > /etc/bash_completion.d/task
 
 # VCS Repotool

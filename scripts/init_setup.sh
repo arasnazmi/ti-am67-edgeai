@@ -1,6 +1,7 @@
 #!/bin/bash
 # NOTE: REPO_TAG and PSDK_LINUX_VERSION should be updated for each release
 source ${WORKDIR}/scripts/utils.sh
+source ${WORKDIR}/scripts/build_common.sh
 
 
 # archtecture for the Docker container
@@ -58,8 +59,9 @@ if [ ! -d $WORKAREA ]; then
     save_env_vars
 
     # repo sync
-    repo init -u git://git.ti.com/processor-sdk/psdk_repo_manifests.git -b refs/tags/${REPO_TAG} -m vision_apps_yocto.xml
-    repo sync
+    # repo resumes where it stopped, so retrying after a network error is cheap.
+    retry 3 repo init -u https://git.ti.com/git/processor-sdk/psdk_repo_manifests.git -b refs/tags/${REPO_TAG} -m vision_apps_yocto.xml || exit 1
+    retry 3 repo sync || exit 1
 
     cd $WORKDIR/scripts
     # add vision_apps_build_all_platforms.sh

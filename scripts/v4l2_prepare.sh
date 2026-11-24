@@ -12,6 +12,7 @@ fi
 
 source "${WORKDIR}/scripts/logging.sh"
 source "${WORKDIR}/scripts/utils.sh"
+source "${WORKDIR}/scripts/build_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 
@@ -42,7 +43,8 @@ cd v4l2-utils
 for patch_file in "${PATCH_FILES[@]}"; do
     patch_url="${REPO_BASE_URL}/${patch_file}?h=${REPO_BRANCH}"
     log_info "Downloading patch: ${patch_file}"
-    if wget -q -O "${patch_file}" "${patch_url}"; then
+    # git.ti.com often answers 503; retry with growing delays.
+    if retry 5 wget -q -O "${patch_file}" "${patch_url}"; then
         log_info "Applying patch: ${patch_file}"
         if patch -p1 < "${patch_file}"; then
             log_success "Patch applied: ${patch_file}"

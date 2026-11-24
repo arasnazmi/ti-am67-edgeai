@@ -16,7 +16,7 @@ source "${WORKDIR}/scripts/logging.sh"
 V4L2_DIR="${WORKDIR}/workarea/v4l2-utils"
 BUILD_DIR="${V4L2_DIR}/build"
 
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 if [ ! -d "${V4L2_DIR}" ]; then
     log_error "v4l2-utils source directory not found: ${V4L2_DIR}"
@@ -35,19 +35,13 @@ log_info "Running meson setup..."
 rm -rf "${BUILD_DIR}"
 meson setup "${BUILD_DIR}"
 
-log_info "Compiling with Ninja (${NPROC} jobs, up to 20 attempts)..."
+log_info "Compiling with Ninja (${NPROC} jobs)..."
 
-MAX_RETRIES=20
-attempt=0
-until ninja -C "${BUILD_DIR}" -j"${NPROC}"; do
-    attempt=$(( attempt + 1 ))
-    if [ "${attempt}" -ge "${MAX_RETRIES}" ]; then
-        log_error "Ninja failed after ${MAX_RETRIES} attempts. Aborting."
-        exit 1
-    fi
-    log_warn "Ninja attempt ${attempt}/${MAX_RETRIES} failed. Retrying in 3 seconds..."
-    sleep 3
-done
+# Ninja resumes where it stopped, so a retry only redoes the failed step.
+if ! retry 3 ninja -C "${BUILD_DIR}" -j"${NPROC}"; then
+    log_error "Ninja build failed."
+    exit 1
+fi
 
 chmod -R a+w "${WORKDIR}/workarea"
 

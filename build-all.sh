@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# If you get segmentation faults, try running this script with `ulimit -c unlimited` first.
+# Compile jobs default to one per CPU (capped by RAM); set NPROC=<n> to override.
 # To run recursively to build all components again and again run this code `while true; do ./build-all.sh; sleep 10; done`
 
 mkdir -p ./out &> /dev/null

@@ -9,7 +9,7 @@ source "${WORKDIR}/scripts/logging.sh"
 
 PROTOBUF_DIR="${WORKDIR}/workarea/onnxruntime/cmake/external/protobuf"
 
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 if [ ! -d "${PROTOBUF_DIR}" ]; then
     log_error "protobuf source directory not found: ${PROTOBUF_DIR}"

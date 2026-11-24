@@ -18,6 +18,7 @@ if [ ! -f "${UTILS_SCRIPT}" ]; then
     exit 1
 fi
 source "${UTILS_SCRIPT}"
+source "${WORKDIR}/scripts/build_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 GST_PLUGINS_DIR="${WORKAREA}/gstreamer/subprojects/gst-plugins-good"
@@ -42,6 +43,7 @@ extract_repo_info "gstreamer"
 
 rm -rf "${WORKAREA}/gstreamer"
 
+mkdir -p "${WORKAREA}"
 cd "${WORKAREA}"
 clone_repo "$repo_url" "$repo_tag" "$repo_branch" "$repo_commit" gstreamer
 log_success "GStreamer cloned."
@@ -64,22 +66,16 @@ for patch_file in "${PATCH_FILES[@]}"; do
 
     log_info "[${index}/${total}] Downloading: ${patch_file}"
 
-    while true :
-    do
-        if ! wget --quiet --show-progress -O "${patch_file}" "${patch_url}";
-        then
-            log_info "Download failed: ${patch_url}. Retrying in 3 seconds..."
-            sleep 3
-            continue
-        else
-            log_info "[${index}/${total}] Applying: ${patch_file}"
-            if ! patch -p1 < "${patch_file}"; then
-                log_error "Failed to apply patch: ${patch_file}"
-                exit 1
-            fi
-            break
-        fi
-    done
+    if ! retry 5 wget --quiet --show-progress -O "${patch_file}" "${patch_url}"; then
+        log_error "Failed to download patch: ${patch_url}"
+        exit 1
+    fi
+
+    log_info "[${index}/${total}] Applying: ${patch_file}"
+    if ! patch -p1 < "${patch_file}"; then
+        log_error "Failed to apply patch: ${patch_file}"
+        exit 1
+    fi
 
 done
 
