@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci/native-arm64-build]
     tags: ["*"]
   pull_request:
     branches: [main]
