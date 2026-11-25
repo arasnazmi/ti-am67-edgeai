@@ -13,6 +13,7 @@ if [ ! -f "${UTILS_SCRIPT}" ]; then
     exit 1
 fi
 source "${UTILS_SCRIPT}"
+source "${WORKDIR}/scripts/deb_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 OUT_DIR="${WORKDIR}/out"
@@ -24,6 +25,10 @@ if [ -z "${onnx_ver}" ]; then
     log_error "Could not read 'onnx_ver' for 'onnxruntime' from config.yaml."
     exit 1
 fi
+
+# -2: the package gained the ldconfig trigger below and no longer ships
+# world-writable headers.
+PKG_VERSION="${onnx_ver}-2"
 
 . /etc/os-release
 OS_NAME="${ID}_${VERSION_ID//./_}"
@@ -66,15 +71,29 @@ log_info "Copying header files from onnxruntime source tree..."
     | (cd "${DST_DIR}/usr/include/onnxruntime" && tar xp)
 log_success "Header files copied."
 
+# The build scripts make the whole work area writable for everyone, and
+# `tar xp` keeps those modes. Nothing in the package may be writable by
+# anyone but root.
+chmod -R go-w "${DST_DIR}"
+
 log_info "Writing DEBIAN/control..."
 cat > "${DST_DIR}/DEBIAN/control" <<EOF
 Package: t3-onnxruntime
-Version: ${onnx_ver}-1
+Version: ${PKG_VERSION}
 Section: libdevel
 Priority: optional
 Architecture: arm64
+Installed-Size: $(deb_installed_size "${DST_DIR}")
 Maintainer: T3 Gemstone Project Development Team <support@t3gemstone.org>
 Description: ONNX Runtime development headers and shared library for ARM64 architecture.
+EOF
+cat "${DST_DIR}/DEBIAN/control"
+
+# The library is shipped as libonnxruntime.so, but its SONAME, which programs
+# linked against it look for, is libonnxruntime.so.${onnx_ver}. Only ldconfig
+# creates the link with that name, so run it when the package is installed.
+cat > "${DST_DIR}/DEBIAN/triggers" <<'EOF'
+activate-noawait ldconfig
 EOF
 
 mkdir -p "${OUT_DIR}"
