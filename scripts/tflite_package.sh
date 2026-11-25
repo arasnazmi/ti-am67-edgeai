@@ -29,6 +29,9 @@ if [ -z "${TF_VER}" ]; then
     exit 1
 fi
 
+# -2: the package no longer ships world-writable libraries and headers.
+PKG_VERSION="${TF_VER}-2"
+
 . /etc/os-release
 OS_NAME="${ID}_${VERSION_ID//./_}"
 
@@ -88,10 +91,15 @@ log_info "Copying TFLite header files..."
 (cd "${WORKAREA}/tensorflow/tensorflow/lite" && find . -name '*.h' -print | tar --create --files-from -) \
     | (cd "${DST_DIR}/usr/include/tensorflow/tensorflow/lite" && tar xp)
 
+# The build scripts make the whole work area writable for everyone, and
+# `tar xp` keeps those modes. Nothing in the package may be writable by
+# anyone but root.
+chmod -R go-w "${DST_DIR}"
+
 log_info "Writing DEBIAN/control..."
 cat > "${DST_DIR}/DEBIAN/control" <<EOF
 Package: t3-libtensorflow-lite-dev
-Version: ${TF_VER}-1
+Version: ${PKG_VERSION}
 Section: libdevel
 Priority: optional
 Architecture: arm64
