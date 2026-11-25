@@ -18,12 +18,13 @@ if [ ! -f "${UTILS_SCRIPT}" ]; then
     exit 1
 fi
 source "${UTILS_SCRIPT}"
+source "${WORKDIR}/scripts/deb_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 GST_DIR="${WORKAREA}/gstreamer"
 OUT_DIR="${WORKDIR}/out"
 
-PKG_VERSION="1.22.12"
+PKG_VERSION="1.22.12-1"
 PKG_ARCHITECTURE="arm64"
 PKG_MAINTAINER="T3 Gemstone Project Development Team <support@t3gemstone.org>"
 
@@ -56,17 +57,35 @@ rm -rf "${DST_DIR}"
 log_info "Running meson install into staging directory..."
 meson install -C "${GST_DIR}/builddir" --destdir="${DST_DIR}"
 
+log_info "Resolving shared library dependencies..."
+if ! SHLIBS_DEPENDS=$(deb_shlibs_depends "${DST_DIR}"); then
+    log_error "dpkg-shlibdeps failed for: ${DST_DIR}"
+    exit 1
+fi
+INSTALLED_SIZE=$(deb_installed_size "${DST_DIR}")
+
 log_info "Writing DEBIAN/control..."
 mkdir -p "${DST_DIR}/DEBIAN"
+# libglib2.0-dev and pkg-config are for building against the headers and .pc
+# files in the package; the rest are the libraries its binaries link against.
 cat > "${DST_DIR}/DEBIAN/control" <<EOF
 Package: t3-gstreamer
 Version: ${PKG_VERSION}
 Section: libdevel
 Priority: optional
 Architecture: ${PKG_ARCHITECTURE}
-Depends: libglib2.0-dev, pkg-config, libasound2, libpulse0, libxv1
+Installed-Size: ${INSTALLED_SIZE}
+Depends: libglib2.0-dev, pkg-config${SHLIBS_DEPENDS:+, ${SHLIBS_DEPENDS}}
 Maintainer: ${PKG_MAINTAINER}
 Description: GStreamer multimedia framework for ARM64 architecture.
+EOF
+cat "${DST_DIR}/DEBIAN/control"
+
+# The libraries go to /usr/local/lib/aarch64-linux-gnu. Refresh the dynamic
+# linker cache once they are installed; until then the GStreamer 1.22 tools
+# load the distribution's libgstreamer from /usr/lib instead.
+cat > "${DST_DIR}/DEBIAN/triggers" <<EOF
+activate-noawait ldconfig
 EOF
 
 mkdir -p "${OUT_DIR}"
