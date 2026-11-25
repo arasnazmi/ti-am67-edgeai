@@ -30,6 +30,19 @@ CMAKE_PROJECTS=(
     "edgeai-dl-inferer"
 )
 
+# Debian revision of the packages that changed without a new upstream version.
+# The packages not listed here are built as plain ${PKG_VERSION}.
+declare -A PKG_REVISION=(
+    # The Python module moved from python3.12/site-packages to
+    # python3/dist-packages (see edgeai_prepare.sh).
+    [edgeai-dl-inferer]=1
+)
+
+pkg_version() {
+    local revision="${PKG_REVISION[$1]:-}"
+    echo "${PKG_VERSION}${revision:+-${revision}}"
+}
+
 write_control() {
     local deb_dir="$1"
     local package_name="$2"
@@ -39,7 +52,7 @@ write_control() {
 
     {
         echo "Package: ${package_name}"
-        echo "Version: ${PKG_VERSION}"
+        echo "Version: $(pkg_version "${package_name}")"
         echo "Section: utils"
         echo "Priority: optional"
         echo "Architecture: ${PKG_ARCHITECTURE}"
@@ -107,7 +120,7 @@ for PROJECT in "${CMAKE_PROJECTS[@]}"; do
     log_info "DEBIAN/control written:"
     cat "${INSTALL_DIR}/DEBIAN/control"
 
-    DEB_NAME="${PROJECT}_${PKG_VERSION}_${PKG_ARCHITECTURE}.deb"
+    DEB_NAME="${PROJECT}_$(pkg_version "${PROJECT}")_${PKG_ARCHITECTURE}.deb"
     build_deb "${INSTALL_DIR}" "${DEB_NAME}"
 done
 
@@ -141,7 +154,7 @@ mkdir -p "${GST_DEB_DIR}/DEBIAN"
 meson install -C build --destdir="${GST_DEB_DIR}"
 
 write_control "${GST_DEB_DIR}/DEBIAN" "${GST_PROJECT}"
-GST_DEB_NAME="${GST_PROJECT}_${PKG_VERSION}_${PKG_ARCHITECTURE}.deb"
+GST_DEB_NAME="${GST_PROJECT}_$(pkg_version "${GST_PROJECT}")_${PKG_ARCHITECTURE}.deb"
 build_deb "${GST_DEB_DIR}" "${GST_DEB_NAME}"
 
 duration=${SECONDS}

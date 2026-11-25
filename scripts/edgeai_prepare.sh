@@ -56,5 +56,18 @@ cd "${WORKAREA}"
 clone_repo "$repo_url" "$repo_tag" "$repo_branch" "$repo_commit" edgeai-app-stack
 log_success "edgeai-app-stack cloned."
 
+# edgeai-dl-inferer installs its Python module to python3.12/site-packages, the
+# Python of TI's Yocto image, where Ubuntu's Python 3.10 does not look. Install
+# it to python3/dist-packages instead, which every Python 3 on Ubuntu searches.
+log_info "Patching the edgeai-dl-inferer Python module install path..."
+DL_INFERER_CMAKE="${WORKAREA}/edgeai-app-stack/edgeai-dl-inferer/cmake/common.cmake"
+sed -i 's#^\([[:space:]]*set(CMAKE_INSTALL_PYTHON_LIBDIR\) .*#\1 ${CMAKE_INSTALL_PREFIX}/lib/python3/dist-packages)#' \
+    "${DL_INFERER_CMAKE}"
+if ! grep -qF 'set(CMAKE_INSTALL_PYTHON_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib/python3/dist-packages)' "${DL_INFERER_CMAKE}"; then
+    log_error "Could not patch the Python module install path in: ${DL_INFERER_CMAKE}"
+    exit 1
+fi
+log_success "edgeai-dl-inferer patched."
+
 duration=${SECONDS}
 log_success "$(basename "$0"): Completed in $(( duration / 60 )) minutes and $(( duration % 60 )) seconds."
