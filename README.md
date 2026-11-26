@@ -104,5 +104,6 @@ Builds use one compile job per CPU, capped at one per 2 GiB of free RAM. To use 
 
 # Continuous Integration
 
-`.github/workflows/build.yml` builds all packages on native arm64 GitHub runners, one runner per component, with ccache.
-The packages are uploaded as the `ti-am67-edgeai-packages` artifact. Pushing a tag also publishes them as a GitHub release.
+`.github/workflows/build.yml` builds all packages for Ubuntu 22.04 and 24.04 on native arm64 GitHub runners, one runner
+per component and release, with ccache. The packages are uploaded as the `ti-am67-edgeai-packages-ubuntu-<release>`
+artifacts. Pushing a tag also publishes both sets as one GitHub release; the file names say which release a file is for.
