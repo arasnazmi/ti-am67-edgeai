@@ -65,7 +65,10 @@ else
     cd "${BUILD_DIR}"
 fi
 
-cmake --build . -j"${NPROC}"
+if ! cmake --build . -j"${NPROC}"; then
+    log_error "TFLite build failed."
+    exit 1
+fi
 
 chmod -R a+w "${WORKDIR}/workarea"
 
