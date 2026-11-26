@@ -151,14 +151,31 @@ jobs:
     permissions:
       contents: write
     steps:
+      # One directory per release: dist/ti-am67-edgeai-packages-ubuntu-<release>
       - uses: actions/download-artifact@v8
         with:
           pattern: ti-am67-edgeai-packages-ubuntu-*
-          path: out
-          merge-multiple: true
+          path: dist
+
+      # Besides the single files, one zip per Ubuntu release with all of its
+      # .deb packages, to install them in one go: unzip, then
+      # `sudo apt install ./*.deb`. The .deb files are compressed already, so
+      # the zip only stores them.
+      - name: Zip the packages of each Ubuntu release
+        run: |
+          mkdir -p out
+          for dir in dist/ti-am67-edgeai-packages-ubuntu-*; do
+            release="${dir##*-ubuntu-}"
+            zip_name="ti-am67-edgeai-${GITHUB_REF_NAME}-ubuntu-${release}-arm64.zip"
+            (cd "${dir}" && zip -q -0 "${GITHUB_WORKSPACE}/out/${zip_name}" ./*.deb)
+            cp "${dir}"/*.deb "${dir}"/*.whl out/
+            echo "${zip_name}:"
+            unzip -l "out/${zip_name}"
+          done
 
       - uses: softprops/action-gh-release@v3
         with:
           files: |
+            out/*.zip
             out/*.deb
             out/*.whl
