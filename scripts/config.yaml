@@ -1,5 +1,8 @@
 # PSDK-Linux for EdgeAI: 10.01.00.03
 
+# A repository can override any of its settings for one Ubuntu release, in a
+# key named after the release (jammy, noble). See get_yaml_value in utils.sh.
+
 # Below are for osrt-libs-build. References:
 # https://git.ti.com/cgit/edgeai/meta-edgeai/tree/recipes-tisdk/ti-tidl/ti-tidl.bb?h=scarthgap
 # https://git.ti.com/cgit/edgeai/meta-edgeai/tree/recipes-tisdk/ti-tidl/ti-tidl-osrt.bb?h=scarthgap

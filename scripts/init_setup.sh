@@ -9,7 +9,8 @@ source ${WORKDIR}/scripts/build_common.sh
 ARCH=arm64
 
 # base image for the target Docker container
-: "${BASE_IMAGE:=ubuntu:22.04}"
+# (the image this runs in, e.g. ubuntu:22.04)
+: "${BASE_IMAGE:=$(. /etc/os-release && echo "${ID}:${VERSION_ID}")}"
 
 : "${SOC:=j721e}"
 WORKAREA=$WORKDIR/workarea/sdk

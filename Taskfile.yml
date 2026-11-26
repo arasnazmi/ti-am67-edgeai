@@ -46,7 +46,7 @@ tasks:
     cmds:
       - mkdir -p workarea
       - $WORKDIR/scripts/init_setup.sh
-      - cd $WORKDIR/workarea/sdk/sdk_builder && SOC=j722s BASE_IMAGE=ubuntu:22.04 ./vision_apps_build.sh
+      - cd $WORKDIR/workarea/sdk/sdk_builder && SOC=j722s BASE_IMAGE=$(. /etc/os-release && echo "${ID}:${VERSION_ID}") ./vision_apps_build.sh
 
   build:onnxrt:
     desc: Build ONNX Runtime for AM67A
