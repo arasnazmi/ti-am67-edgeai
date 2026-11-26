@@ -126,7 +126,12 @@ RUN curl -fsSL https://github.com/go-task/task/releases/download/v3.44.1/task_li
     task --completion bash > /etc/bash_completion.d/task
 
 # VCS Repotool
-RUN pip install vcstool --force-reinstall && \
+# Its dependencies include the latest setuptools, which no longer has
+# pkg_resources. --ignore-installed puts it in /usr/local next to the
+# distribution's setuptools, whose pkg_resources python3-pbr still imports
+# whenever a setup.py runs. --force-reinstall did the same on Ubuntu 22.04,
+# but on 24.04 it removes the distribution's setuptools.
+RUN pip install vcstool --ignore-installed && \
     cp /usr/local/share/vcstool-completion/vcs.bash /etc/bash_completion.d/vcs
 
 # -------------------------------------------------------------------------
