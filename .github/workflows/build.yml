@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main, ci/native-arm64-build]
+    branches: [main, ci/native-arm64-build, feat/ubuntu-24.04]
     tags: ["*"]
   pull_request:
     branches: [main]
