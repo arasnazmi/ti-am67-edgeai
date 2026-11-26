@@ -46,9 +46,20 @@ user@host:$ devbox shell
 
 ##### 3. Create a Docker image, and enter it.
 
+The packages are built for the Ubuntu release of the image: 22.04 (jammy) by default, or 24.04 (noble).
+
 ```bash
-root@host:~ task box
+root@host:~ task box                        # Ubuntu 22.04
+root@host:~ task box UBUNTU_VERSION=24.04   # Ubuntu 24.04
 ```
+
+The image mounts the repository, so `workarea/` and `out/` are shared between the two. Use a separate
+checkout for each release, or empty both directories before building for the other one.
+
+On Ubuntu 24.04, t3-gstreamer is GStreamer 1.24.13 instead of 1.22.12: it is installed to `/usr/local`, ahead of the
+distribution's GStreamer 1.24.2, and must not be older. TI does not publish its gst-plugins-good patches for 1.24, so
+`patches/gstreamer/1.24.13` has them rebased, plus a patch that keeps the Bayer format names (`rggb10`, ...) of TI's
+1.22 patches, which the TI GStreamer plugins and applications use.
 
 ##### 4. Build the Deb and WHL packages
 

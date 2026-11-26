@@ -6,6 +6,8 @@ version: '3'
 vars:
   WORKDIR: '{{ .WORKDIR | default "/home/workdir" }}'
   SDK_VER: '{{ .SDK_VER | default "11_00_00" }}'
+  # The Ubuntu release to build for (22.04 or 24.04), e.g. `task box UBUNTU_VERSION=24.04`.
+  UBUNTU_VERSION: '{{ .UBUNTU_VERSION | default "22.04" }}'
   PROFILE: 'release'
 
 dotenv: ['.env']
@@ -19,19 +21,22 @@ tasks:
       - echo -e "\nEnvironment:\n"
       - echo "  WORKDIR          = '{{ .WORKDIR }}'"
       - echo "  SDK_VER          = '{{ .SDK_VER }}'"
+      - echo "  UBUNTU_VERSION   = '{{ .UBUNTU_VERSION }}'"
       - echo ""
 
   box:
-    desc: Enter Distrobox's Ubuntu 22.04 image to build debs&whls
+    desc: Enter the Ubuntu build image (UBUNTU_VERSION=22.04 or 24.04) to build debs&whls
     cmds:
-      - docker build --platform linux/arm64 -f Dockerfile -t ti-am67-edgeai:latest .
+      - docker build --platform linux/arm64 -f Dockerfile
+          --build-arg UBUNTU_VERSION="{{ .UBUNTU_VERSION }}"
+          -t ti-am67-edgeai:{{ .UBUNTU_VERSION }} .
       - docker run -it --rm -v ${PWD}:/root
           --env SDK_VER="{{ .SDK_VER }}"
           --env NPROC
           --device /dev/kvm
           --security-opt label=disable
           --privileged
-          --network host ti-am67-edgeai:latest
+          --network host ti-am67-edgeai:{{ .UBUNTU_VERSION }}
           bash -c "cd /root && exec bash"
 
   destroy:
@@ -39,7 +44,7 @@ tasks:
     desc: Destroy everything including docker images
     cmds:
       - sudo docker stop ti-am67-edgeai || true
-      - sudo docker rmi ti-am67-edgeai || true
+      - sudo docker rmi ti-am67-edgeai:22.04 ti-am67-edgeai:24.04 ti-am67-edgeai:latest || true
 
   build:vision_lib:
     desc: Build vision library for AM67A

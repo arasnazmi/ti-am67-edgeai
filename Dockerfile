@@ -1,9 +1,17 @@
 ARG ARCH=arm64
-FROM --platform=linux/${ARCH} ubuntu:22.04
+# The Ubuntu release that the packages are built for: 22.04 or 24.04. Each
+# release needs its own build, as the packages link against its libraries.
+ARG UBUNTU_VERSION=22.04
+FROM --platform=linux/${ARCH} ubuntu:${UBUNTU_VERSION}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV WORKDIR=/root
 ENV SOC=j722s
+
+# The build installs Python packages and its own wheels into the system Python.
+# Ubuntu 24.04's pip refuses that unless told to (PEP 668); the pip of 22.04
+# ignores the variable.
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # When this arm64 image runs on an x86 host, every process runs under
 # qemu-user, which gives the guest a fixed 8 MiB stack and ignores setrlimit().
@@ -84,15 +92,18 @@ RUN apt-get update && \
         zstd \
     && locale-gen en_US.UTF-8
 
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
+RUN . /etc/os-release && \
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
     gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg && \
-    echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' \
+    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${VERSION_CODENAME} main" \
     > /etc/apt/sources.list.d/kitware.list && \
     apt-get update
 
-RUN apt-get install -y \
-    cmake=3.29.6-0kitware1ubuntu22.04.1 \
-    cmake-data=3.29.6-0kitware1ubuntu22.04.1
+# The same CMake on every release.
+RUN . /etc/os-release && \
+    apt-get install -y \
+    cmake=3.29.6-0kitware1ubuntu${VERSION_ID}.1 \
+    cmake-data=3.29.6-0kitware1ubuntu${VERSION_ID}.1
 
 RUN git clone https://git.ti.com/git/rpmsg/ti-rpmsg-char.git \
     --branch 0.6.7 --depth 1 --single-branch && \
