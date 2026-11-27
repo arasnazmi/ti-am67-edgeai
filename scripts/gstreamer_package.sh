@@ -24,7 +24,12 @@ WORKAREA="${WORKDIR}/workarea"
 GST_DIR="${WORKAREA}/gstreamer"
 OUT_DIR="${WORKDIR}/out"
 
-PKG_VERSION="1.22.12-1"
+GST_VERSION=$(get_yaml_value "gstreamer" "branch")
+if [ -z "${GST_VERSION}" ]; then
+    log_error "Could not read the GStreamer version ('branch') from config.yaml."
+    exit 1
+fi
+PKG_VERSION="${GST_VERSION}-1"
 PKG_ARCHITECTURE="arm64"
 PKG_MAINTAINER="T3 Gemstone Project Development Team <support@t3gemstone.org>"
 
@@ -82,8 +87,8 @@ EOF
 cat "${DST_DIR}/DEBIAN/control"
 
 # The libraries go to /usr/local/lib/aarch64-linux-gnu. Refresh the dynamic
-# linker cache once they are installed; until then the GStreamer 1.22 tools
-# load the distribution's libgstreamer from /usr/lib instead.
+# linker cache once they are installed; until then the GStreamer tools in the
+# package load the distribution's libgstreamer from /usr/lib instead.
 cat > "${DST_DIR}/DEBIAN/triggers" <<EOF
 activate-noawait ldconfig
 EOF

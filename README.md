@@ -46,9 +46,20 @@ user@host:$ devbox shell
 
 ##### 3. Create a Docker image, and enter it.
 
+The packages are built for the Ubuntu release of the image: 22.04 (jammy) by default, or 24.04 (noble).
+
 ```bash
-root@host:~ task box
+root@host:~ task box                        # Ubuntu 22.04
+root@host:~ task box UBUNTU_VERSION=24.04   # Ubuntu 24.04
 ```
+
+The image mounts the repository, so `workarea/` and `out/` are shared between the two. Use a separate
+checkout for each release, or empty both directories before building for the other one.
+
+On Ubuntu 24.04, t3-gstreamer is GStreamer 1.24.13 instead of 1.22.12: it is installed to `/usr/local`, ahead of the
+distribution's GStreamer 1.24.2, and must not be older. TI does not publish its gst-plugins-good patches for 1.24, so
+`patches/gstreamer/1.24.13` has them rebased, plus a patch that keeps the Bayer format names (`rggb10`, ...) of TI's
+1.22 patches, which the TI GStreamer plugins and applications use.
 
 ##### 4. Build the Deb and WHL packages
 
@@ -93,5 +104,8 @@ Builds use one compile job per CPU, capped at one per 2 GiB of free RAM. To use 
 
 # Continuous Integration
 
-`.github/workflows/build.yml` builds all packages on native arm64 GitHub runners, one runner per component, with ccache.
-The packages are uploaded as the `ti-am67-edgeai-packages` artifact. Pushing a tag also publishes them as a GitHub release.
+`.github/workflows/build.yml` builds all packages for Ubuntu 22.04 and 24.04 on native arm64 GitHub runners, one runner
+per component and release, with ccache. The packages are uploaded as the `ti-am67-edgeai-packages-ubuntu-<release>`
+artifacts. Pushing a tag also publishes both sets as one GitHub release; the file names say which release a file is for.
+The release also has one zip per Ubuntu release, `ti-am67-edgeai-<tag>-ubuntu-<release>-arm64.zip`, with all of its
+`.deb` packages: unzip it and run `sudo apt install ./*.deb`.

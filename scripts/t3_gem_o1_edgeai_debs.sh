@@ -67,16 +67,18 @@ log_info "Staging dir: ${DST_DIR}"
 log_info "Output dir : ${OUT_DIR}"
 
 # edgeai-app-stack ships prebuilt app_edgeai and app_config_checker binaries
-# that were built for a newer distribution (GLIBC 2.38, OpenCV 4.9) and do not
-# start on Ubuntu 22.04. Build them against the libraries in this image. The
-# build goes to its own directory so that the app stack checkout stays clean.
+# that were built for another distribution (GLIBC 2.38, OpenCV 4.9) and do not
+# start on Ubuntu 22.04 or 24.04. Build them against the libraries in this
+# image. The build goes to its own directory so that the app stack checkout
+# stays clean.
 #
 # apps_cpp takes the GStreamer headers from /usr/include and leaves the
 # libraries to the default linker path, where this image has the distribution's
-# GStreamer 1.20. Put the GStreamer that pkg-config finds (t3-gstreamer 1.22 in
-# /usr/local) first: -I is searched before -isystem, and the -L of LDFLAGS
-# before the default directories. Linking against 1.20 fails, because our
-# libgstbase needs symbols that only libgstreamer 1.22 has.
+# GStreamer (1.20 on 22.04, 1.24.2 on 24.04). Put the GStreamer that pkg-config
+# finds (t3-gstreamer in /usr/local) first: -I is searched before -isystem, and
+# the -L of LDFLAGS before the default directories. Linking against the older
+# distribution GStreamer fails, because our libgstbase needs symbols that only
+# our libgstreamer has.
 GST_MODULES="gstreamer-1.0 gstreamer-app-1.0"
 if ! GST_CFLAGS=$(pkg-config --cflags-only-I ${GST_MODULES}) ||
    ! GST_LDFLAGS=$(pkg-config --libs-only-L ${GST_MODULES}); then
@@ -138,18 +140,19 @@ log_success "Python wheels copied."
 # wheel installs under its own module directory. Make it reachable through the
 # linker search path, so that the plugins load without LD_LIBRARY_PATH, e.g.
 # under sudo. postinst installs the wheel; the ldconfig trigger below then
-# adds the library to the cache.
-log_info "Adding /usr/lib/libdlr.so symlink..."
+# adds the library to the cache. DLR_DIR (utils.sh) is where pip installs the
+# wheel for the Python of this image, which is the one of the target release.
+log_info "Adding /usr/lib/libdlr.so symlink to ${DLR_DIR}/libdlr.so..."
 mkdir -p "${DST_DIR}/usr/lib"
-ln -s ../local/lib/python3.10/dist-packages/dlr/libdlr.so "${DST_DIR}/usr/lib/libdlr.so"
+ln -s "..${DLR_DIR#/usr}/libdlr.so" "${DST_DIR}/usr/lib/libdlr.so"
 
 # The published 11.0 and the documentation use /opt/t3-edgeai-env.
 log_info "Writing t3-edgeai-env script..."
 cat > "${DST_DIR}/opt/t3-edgeai-env" <<'EOF'
 #!/bin/bash
 export CPLUS_INCLUDE_PATH=/usr/local/include/gstreamer-1.0:${CPLUS_INCLUDE_PATH:-}
-export LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:${LIBRARY_PATH:-}
-export LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:${LD_LIBRARY_PATH:-}
+export LIBRARY_PATH=@DLR_DIR@:${LIBRARY_PATH:-}
+export LD_LIBRARY_PATH=@DLR_DIR@:${LD_LIBRARY_PATH:-}
 export GST_PLUGIN_PATH=/usr/local/lib/aarch64-linux-gnu/gstreamer-1.0
 export EDGEAI_GST_APPS_PATH=/opt/edgeai-gst-apps
 export OOB_DEMO_ASSETS_PATH=/opt/oob-demo-assets
@@ -163,6 +166,7 @@ export PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h(edge-ai)\[\03
 echo -e "\033[1;32m[INFO] T3 EdgeAI environment successfully loaded!\033[0m"
 echo -e "\033[1;34mSOC: ${SOC} | DEVICE: ${DEVICE_NAME} | SDK: ${EDGEAI_SDK_VERSION}\033[0m"
 EOF
+sed -i "s#@DLR_DIR@#${DLR_DIR}#g" "${DST_DIR}/opt/t3-edgeai-env"
 chmod +x "${DST_DIR}/opt/t3-edgeai-env"
 log_success "t3-edgeai-env written."
 
@@ -187,6 +191,9 @@ log_info "Writing DEBIAN/postinst..."
 cat > "${DST_DIR}/DEBIAN/postinst" <<'EOF'
 #!/bin/bash
 set -e
+# The wheels go to the system Python, under /usr/local. On Ubuntu 24.04 pip
+# refuses that unless told to (PEP 668); the pip of 22.04 ignores the variable.
+export PIP_BREAK_SYSTEM_PACKAGES=1
 # 11.0 installed opencv-python from PyPI. It needs numpy 2 and would hide the
 # distribution's python3-opencv, which this version uses instead.
 if [ "$1" = configure ] && [ "${2:-}" = 11.0 ]; then

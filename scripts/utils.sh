@@ -1,6 +1,13 @@
 #!/bin/bash
 
-export CPLUS_INCLUDE_PATH=/usr/local/lib/python3.10/dist-packages/dlr/include:$CPLUS_INCLUDE_PATH
+# The Ubuntu release that this image builds for (jammy, noble) and the name of
+# its Python, e.g. python3.10, under which pip installs the wheels.
+DISTRO_CODENAME=$(. /etc/os-release && echo "${VERSION_CODENAME}")
+PYTHON_VERSION=$(python3 -c 'import sys; print("python%d.%d" % sys.version_info[:2])')
+# The dlr wheel brings libdlr.so, which the TI GStreamer plugins link against.
+DLR_DIR=/usr/local/lib/${PYTHON_VERSION}/dist-packages/dlr
+
+export CPLUS_INCLUDE_PATH=${DLR_DIR}/include:$CPLUS_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/lib/tensorflow:$CPLUS_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/lib/tflite_2.12:$CPLUS_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/lib/tensorflow/tensorflow/lite/tools/pip_package/gen/tflite_pip/python3/cmake_build/flatbuffers/include:$CPLUS_INCLUDE_PATH
@@ -10,8 +17,8 @@ export CPLUS_INCLUDE_PATH=/usr/include/libdrm:$CPLUS_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include/opencv4:$CPLUS_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=/usr/local/include/gstreamer-1.0:$CPLUS_INCLUDE_PATH
 
-export LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:$LIBRARY_PATH
-export LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/dlr:$LD_LIBRARY_PATH
+export LIBRARY_PATH=${DLR_DIR}:$LIBRARY_PATH
+export LD_LIBRARY_PATH=${DLR_DIR}:$LD_LIBRARY_PATH
 
 export EDGEAI_GST_APPS_PATH=/opt/edgeai-gst-apps       
 export OOB_DEMO_ASSETS_PATH=/opt/oob-demo-assets       
@@ -36,12 +43,15 @@ export LDFLAGS="-L/usr/include/tflite_2.12/ruy-build/ruy $LDFLAGS"
 config_file="$WORKDIR/scripts/config.yaml"
 
 # Function to get a value from the YAML file
+# Usage: get_yaml_value <repo> <key>
+# A value under <repo>.<release>, e.g. gstreamer.noble.branch, takes precedence
+# over <repo>.<key> when building for that Ubuntu release.
 get_yaml_value() {
     local repo=$1
     local key=$2
 
     # Extract the value using yq
-    value=$(yq e ".${repo}.${key}" "$config_file")
+    value=$(yq e ".${repo}.${DISTRO_CODENAME}.${key} // .${repo}.${key}" "$config_file")
     echo "$value"
 }
 
@@ -49,10 +59,10 @@ get_yaml_value() {
 extract_repo_info() {
     local repo=$1
 
-    repo_url=$(yq e ".${repo}.url" "$config_file")
-    repo_tag=$(yq e ".${repo}.tag" "$config_file")
-    repo_branch=$(yq e ".${repo}.branch" "$config_file")
-    repo_commit=$(yq e ".${repo}.commit" "$config_file")
+    repo_url=$(get_yaml_value "${repo}" url)
+    repo_tag=$(get_yaml_value "${repo}" tag)
+    repo_branch=$(get_yaml_value "${repo}" branch)
+    repo_commit=$(get_yaml_value "${repo}" commit)
 
     echo "repo_url: $repo_url"
     echo "repo_tag: $repo_tag"

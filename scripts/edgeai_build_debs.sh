@@ -43,6 +43,16 @@ pkg_version() {
     echo "${PKG_VERSION}${revision:+-${revision}}"
 }
 
+# The packages are built for one Ubuntu release. Their file names say which,
+# like those of the other packages, so that the files built for different
+# releases can sit side by side, e.g. in a GitHub release or an apt pool.
+. /etc/os-release
+OS_NAME="${ID}_${VERSION_ID//./_}"
+
+deb_name() {
+    echo "${1}_$(pkg_version "$1")_${OS_NAME}_${PKG_ARCHITECTURE}.deb"
+}
+
 write_control() {
     local deb_dir="$1"
     local package_name="$2"
@@ -120,7 +130,7 @@ for PROJECT in "${CMAKE_PROJECTS[@]}"; do
     log_info "DEBIAN/control written:"
     cat "${INSTALL_DIR}/DEBIAN/control"
 
-    DEB_NAME="${PROJECT}_$(pkg_version "${PROJECT}")_${PKG_ARCHITECTURE}.deb"
+    DEB_NAME=$(deb_name "${PROJECT}")
     build_deb "${INSTALL_DIR}" "${DEB_NAME}"
 done
 
@@ -154,7 +164,7 @@ mkdir -p "${GST_DEB_DIR}/DEBIAN"
 meson install -C build --destdir="${GST_DEB_DIR}"
 
 write_control "${GST_DEB_DIR}/DEBIAN" "${GST_PROJECT}"
-GST_DEB_NAME="${GST_PROJECT}_$(pkg_version "${GST_PROJECT}")_${PKG_ARCHITECTURE}.deb"
+GST_DEB_NAME=$(deb_name "${GST_PROJECT}")
 build_deb "${GST_DEB_DIR}" "${GST_DEB_NAME}"
 
 duration=${SECONDS}

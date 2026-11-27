@@ -4,6 +4,10 @@ description: >
   daemon, reusing layers from the GitHub Actions cache.
 
 inputs:
+  ubuntu-version:
+    description: The Ubuntu release the image builds for (22.04 or 24.04).
+    required: false
+    default: "22.04"
   tag:
     description: Tag for the loaded image.
     required: false
@@ -28,8 +32,9 @@ runs:
       with:
         context: .
         platforms: linux/arm64
+        build-args: UBUNTU_VERSION=${{ inputs.ubuntu-version }}
         tags: ${{ inputs.tag }}
         load: true
         provenance: false
-        cache-from: type=gha,scope=builder-arm64
-        cache-to: ${{ inputs.save-cache == 'true' && 'type=gha,scope=builder-arm64,mode=max' || '' }}
+        cache-from: type=gha,scope=builder-arm64-ubuntu${{ inputs.ubuntu-version }}
+        cache-to: ${{ inputs.save-cache == 'true' && format('type=gha,scope=builder-arm64-ubuntu{0},mode=max', inputs.ubuntu-version) || '' }}

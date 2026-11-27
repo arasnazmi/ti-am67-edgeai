@@ -32,7 +32,8 @@ fi
 
 # -Wno-error=stringop-overflow is required on Ubuntu 24.04 to suppress a
 # compiler error that incorrectly treats this warning as fatal.
-ubuntu_version=$(lsb_release -rs 2>/dev/null || echo "")
+# os-release is in every image, lsb_release only where lsb-release is installed.
+ubuntu_version=$(. /etc/os-release && echo "${VERSION_ID}")
 CMAKE_CXX_FLAGS_EXTRA=""
 if [ "${ubuntu_version}" = "24.04" ]; then
     log_warn "Ubuntu 24.04 detected — adding -Wno-error=stringop-overflow workaround."
@@ -64,7 +65,10 @@ else
     cd "${BUILD_DIR}"
 fi
 
-cmake --build . -j"${NPROC}"
+if ! cmake --build . -j"${NPROC}"; then
+    log_error "TFLite build failed."
+    exit 1
+fi
 
 chmod -R a+w "${WORKDIR}/workarea"
 

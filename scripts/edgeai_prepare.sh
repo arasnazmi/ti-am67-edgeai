@@ -57,8 +57,9 @@ clone_repo "$repo_url" "$repo_tag" "$repo_branch" "$repo_commit" edgeai-app-stac
 log_success "edgeai-app-stack cloned."
 
 # edgeai-dl-inferer installs its Python module to python3.12/site-packages, the
-# Python of TI's Yocto image, where Ubuntu's Python 3.10 does not look. Install
-# it to python3/dist-packages instead, which every Python 3 on Ubuntu searches.
+# Python of TI's Yocto image. Ubuntu's Python looks in dist-packages instead,
+# even where it is 3.12. Install the module to python3/dist-packages, which
+# every Python 3 on Ubuntu searches.
 log_info "Patching the edgeai-dl-inferer Python module install path..."
 DL_INFERER_CMAKE="${WORKAREA}/edgeai-app-stack/edgeai-dl-inferer/cmake/common.cmake"
 sed -i 's#^\([[:space:]]*set(CMAKE_INSTALL_PYTHON_LIBDIR\) .*#\1 ${CMAKE_INSTALL_PREFIX}/lib/python3/dist-packages)#' \
@@ -68,6 +69,27 @@ if ! grep -qF 'set(CMAKE_INSTALL_PYTHON_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib/pytho
     exit 1
 fi
 log_success "edgeai-dl-inferer patched."
+
+# The build files of edgeai-dl-inferer, apps_cpp (CMake) and edgeai-gst-plugins
+# (the pkg-config file of edgeai-dl-inferer) look for the headers and the
+# library of the dlr wheel under python3.10, the Python of Ubuntu 22.04. Point
+# them to where pip installed the wheel for the Python of this image.
+DLR_OLD_PATH="lib/python3.10/dist-packages/dlr"
+DLR_NEW_PATH="lib/${PYTHON_VERSION}/dist-packages/dlr"
+DLR_BUILD_FILES=(--include='*.cmake' --include='CMakeLists.txt' --include='*.pc')
+if [ "${DLR_OLD_PATH}" != "${DLR_NEW_PATH}" ]; then
+    log_info "Pointing the build files to the dlr wheel of ${PYTHON_VERSION}..."
+    mapfile -t dlr_build_files < <(grep -rlF "${DLR_OLD_PATH}" "${WORKAREA}/edgeai-app-stack" "${DLR_BUILD_FILES[@]}")
+    for build_file in "${dlr_build_files[@]}"; do
+        sed -i "s#${DLR_OLD_PATH}#${DLR_NEW_PATH}#g" "${build_file}"
+        log_info "  ${build_file#"${WORKAREA}/"}"
+    done
+    if grep -rqF "${DLR_OLD_PATH}" "${WORKAREA}/edgeai-app-stack" "${DLR_BUILD_FILES[@]}"; then
+        log_error "Could not replace ${DLR_OLD_PATH} in the edgeai-app-stack build files."
+        exit 1
+    fi
+    log_success "dlr path updated in ${#dlr_build_files[@]} build file(s)."
+fi
 
 duration=${SECONDS}
 log_success "$(basename "$0"): Completed in $(( duration / 60 )) minutes and $(( duration % 60 )) seconds."
