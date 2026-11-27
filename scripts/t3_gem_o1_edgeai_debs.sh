@@ -22,10 +22,11 @@ APP_STACK_DIR="${WORKAREA}/edgeai-app-stack"
 MODEL_ZOO_URL="https://packages.t3gemstone.org/sdk/models/model_zoo.tar.xz"
 MODEL_ZOO_ARCHIVE="${WORKAREA}/model_zoo.tar.xz"
 
-PKG_VERSION="11.0-1"
+PKG_VERSION="11.0-2"
 PKG_ARCHITECTURE="arm64"
 PKG_MAINTAINER="T3 Gemstone Project Development Team <support@t3gemstone.org>"
-# 11.0-1 follows the published 11.0 of this package.
+# 11.0-1 follows the published 11.0 of this package. 11.0-2 brings the
+# edgeai-gst-apps fix that keeps the first IDR frame of .mkv outputs.
 # edgeai-dl-inferer 11.0.0-1 is the first one whose Python module the system
 # Python finds. The python3-* and gir1.2-* packages are what apps_python needs.
 PKG_DEPENDS="t3-edgeai-firmware (>= 11.0.0), arm-tidl-j722s, edgeai-apps-utils, \
