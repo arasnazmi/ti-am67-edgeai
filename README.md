@@ -61,6 +61,9 @@ distribution's GStreamer 1.24.2, and must not be older. TI does not publish its 
 `patches/gstreamer/1.24.13` has them rebased, plus a patch that keeps the Bayer format names (`rggb10`, ...) of TI's
 1.22 patches, which the TI GStreamer plugins and applications use.
 
+TI's own patches, for gst-plugins-good 1.22 in `patches/gstreamer/1.22.12` and for v4l-utils in `patches/v4l2-utils`,
+are copied unchanged from meta-arago (scarthgap), since git.ti.com often fails to serve them to the CI runners.
+
 ##### 4. Build the Deb and WHL packages
 
 ```bash

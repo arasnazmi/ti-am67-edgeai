@@ -3,6 +3,7 @@ out/
 build/
 *.patch
 !patches/gstreamer/**
+!patches/v4l2-utils/**
 .cache/
 .cmake/
 .repoconfig
