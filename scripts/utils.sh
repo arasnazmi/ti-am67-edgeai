@@ -39,6 +39,10 @@ export LDFLAGS="-L/usr/include/tflite_2.12/ruy-build/ruy $LDFLAGS"
 
 # Utility functions
 
+# retry(), which clone_repo uses. Found next to this file, since not every
+# script that sources utils.sh sets WORKDIR to this checkout.
+source "$(dirname "${BASH_SOURCE[0]}")/build_common.sh"
+
 # config file path
 config_file="$WORKDIR/scripts/config.yaml"
 
@@ -72,6 +76,9 @@ extract_repo_info() {
 
 # Function to clone a repository based on the tag value
 # Usage: clone_repo "$repo_url" "$tag" "$branch" "$commit" "$repo_name"
+# git.ti.com often times out from the CI runners, so each clone is tried up to
+# 5 times. A failed git clone removes the directory it created, so the next
+# attempt starts from scratch.
 clone_repo() {
     local repo_url=$1
     local tag=$2
@@ -81,13 +88,13 @@ clone_repo() {
 
     if [[ "$tag" == "None" || -z "$tag" ]]; then
         # clone the repository with the specified branch and checkout the commit
-        git clone --branch "$branch" --single-branch "$repo_url" "$repo_name"
+        retry 5 git clone --branch "$branch" --single-branch "$repo_url" "$repo_name"
         cd "$repo_name" || exit
         git checkout "$commit"
         cd -
     else
         # clone the repository with the specified tag
-        git clone --branch "$tag" --depth 1 --single-branch "$repo_url" "$repo_name"
+        retry 5 git clone --branch "$tag" --depth 1 --single-branch "$repo_url" "$repo_name"
     fi
 }
 
