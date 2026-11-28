@@ -14,7 +14,7 @@ source "${WORKDIR}/scripts/logging.sh"
 
 RPMSG_DIR="${WORKDIR}/workarea/ti-rpmsg-char"
 
-NPROC=1
+source "${WORKDIR}/scripts/build_common.sh"
 
 if [ ! -d "${RPMSG_DIR}" ]; then
     log_error "ti-rpmsg-char source directory not found: ${RPMSG_DIR}"

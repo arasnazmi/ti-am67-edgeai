@@ -12,15 +12,14 @@ fi
 
 source "${WORKDIR}/scripts/logging.sh"
 source "${WORKDIR}/scripts/utils.sh"
+source "${WORKDIR}/scripts/build_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 
-REPO_BASE_URL="https://git.ti.com/cgit/arago-project/meta-arago/plain/meta-arago-extras/recipes-multimedia/v4l2apps/v4l-utils"
-REPO_BRANCH="scarthgap"
-PATCH_FILES=(
-    "0001-media-ctl-Install-media-ctl-header-and-library-files.patch"
-    "0002-media-ctl-add-support-for-RGBIr-bayer-formats.patch"
-)
+# TI's v4l-utils patches, unchanged from meta-arago (scarthgap, commit
+# dd1b7f9b85c0), applied in file name order. They are kept here because
+# git.ti.com often fails from the CI runners.
+PATCH_DIR="${WORKDIR}/patches/v4l2-utils"
 
 SECONDS=0
 current_dir=$(pwd)
@@ -37,21 +36,15 @@ rm -rf "${WORKAREA}/v4l2-utils"
 clone_repo "$repo_url" "$repo_tag" "$repo_branch" "$repo_commit" v4l2-utils
 log_success "Clone complete."
 
-log_info "Applying ${#PATCH_FILES[@]} patch(es) from ${REPO_BASE_URL}..."
+log_info "Applying the patches in ${PATCH_DIR}..."
 cd v4l2-utils
-for patch_file in "${PATCH_FILES[@]}"; do
-    patch_url="${REPO_BASE_URL}/${patch_file}?h=${REPO_BRANCH}"
-    log_info "Downloading patch: ${patch_file}"
-    if wget -q -O "${patch_file}" "${patch_url}"; then
-        log_info "Applying patch: ${patch_file}"
-        if patch -p1 < "${patch_file}"; then
-            log_success "Patch applied: ${patch_file}"
-        else
-            log_error "Failed to apply patch: ${patch_file}"
-            exit 1
-        fi
+for patch_path in "${PATCH_DIR}"/*.patch; do
+    patch_file=$(basename "${patch_path}")
+    log_info "Applying patch: ${patch_file}"
+    if patch -p1 < "${patch_path}"; then
+        log_success "Patch applied: ${patch_file}"
     else
-        log_error "Failed to download patch: ${patch_file}"
+        log_error "Failed to apply patch: ${patch_file}"
         exit 1
     fi
 done

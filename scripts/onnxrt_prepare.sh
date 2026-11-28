@@ -13,6 +13,7 @@ if [ ! -f "${UTILS_SCRIPT}" ]; then
     exit 1
 fi
 source "${UTILS_SCRIPT}"
+source "${WORKDIR}/scripts/build_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 ONNX_DIR="${WORKAREA}/onnxruntime"
@@ -46,7 +47,14 @@ fi
 
 log_info "Initializing submodules..."
 cd "${ONNX_DIR}"
-git submodule update --init --recursive
+# microsoft/onnxruntime-extensions has been removed from GitHub, so this
+# submodule can no longer be cloned. It is only used with --use_extensions,
+# which this build does not pass. build.py's own submodule update skips it too.
+git config submodule.cmake/external/onnxruntime-extensions.update none
+if ! retry 3 git submodule update --init --recursive; then
+    log_error "Failed to initialize ONNXRuntime submodules."
+    exit 1
+fi
 log_success "Submodules initialized."
 
 log_info "Patching tool.cmake..."

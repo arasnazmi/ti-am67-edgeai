@@ -1,0 +1,163 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Nazmi Aras <nazmi.aras@t3gemstone.org>
+Date: Thu, 26 Nov 2026 17:32:00 +0300
+Subject: [PATCH 6/6] v4l2object: keep TI's names for 10, 12 and 16 bit Bayer
+ formats
+
+GStreamer 1.24 added these formats as bggr10le, rggb12le, etc. TI's
+patches for GStreamer 1.22 had added them before that as bggr10, rggb12,
+etc., and tiovxisp and the TI Edge AI 11.0 applications only know those
+names, so a camera pipeline written for 1.22 does not link with 1.24.
+
+Name the formats as TI's patches do, and accept both names in caps.
+14 bit formats, which TI's patches never had, keep the upstream names.
+---
+ sys/v4l2/gstv4l2object.c | 64 +++++++++++++++++++++++++---------------
+ 1 file changed, 40 insertions(+), 24 deletions(-)
+
+diff --git a/sys/v4l2/gstv4l2object.c b/sys/v4l2/gstv4l2object.c
+index bd339a8..56b8911 100644
+--- a/sys/v4l2/gstv4l2object.c
++++ b/sys/v4l2/gstv4l2object.c
+@@ -1533,65 +1533,69 @@ gst_v4l2_object_v4l2fourcc_to_bare_struct (guint32 fourcc)
+       break;
+     case V4L2_PIX_FMT_WNVA:    /* Winnov hw compress */
+       break;
++    /* The 10, 12 and 16 bit formats keep the names that TI's patches for
++     * GStreamer 1.22 gave them, without the "le" suffix: tiovxisp and the
++     * TI Edge AI applications only know those. The upstream names are still
++     * accepted in caps, see gst_v4l2_object_get_caps_info(). */
+     case V4L2_PIX_FMT_SBGGR8:
+       bayer_format = "bggr";
+       break;
+     case V4L2_PIX_FMT_SBGGR10:
+-      bayer_format = "bggr10le";
++      bayer_format = "bggr10";
+       break;
+     case V4L2_PIX_FMT_SBGGR12:
+-      bayer_format = "bggr12le";
++      bayer_format = "bggr12";
+       break;
+     case V4L2_PIX_FMT_SBGGR14:
+       bayer_format = "bggr14le";
+       break;
+     case V4L2_PIX_FMT_SBGGR16:
+-      bayer_format = "bggr16le";
++      bayer_format = "bggr16";
+       break;
+     case V4L2_PIX_FMT_SGBRG8:
+       bayer_format = "gbrg";
+       break;
+     case V4L2_PIX_FMT_SGBRG10:
+-      bayer_format = "gbrg10le";
++      bayer_format = "gbrg10";
+       break;
+     case V4L2_PIX_FMT_SGBRG12:
+-      bayer_format = "gbrg12le";
++      bayer_format = "gbrg12";
+       break;
+     case V4L2_PIX_FMT_SGBRG14:
+       bayer_format = "gbrg14le";
+       break;
+     case V4L2_PIX_FMT_SGBRG16:
+-      bayer_format = "gbrg16le";
++      bayer_format = "gbrg16";
+       break;
+     case V4L2_PIX_FMT_SGRBG8:
+       bayer_format = "grbg";
+       break;
+     case V4L2_PIX_FMT_SGRBG10:
+-      bayer_format = "grbg10le";
++      bayer_format = "grbg10";
+       break;
+     case V4L2_PIX_FMT_SGRBG12:
+-      bayer_format = "grbg12le";
++      bayer_format = "grbg12";
+       break;
+     case V4L2_PIX_FMT_SGRBG14:
+       bayer_format = "grbg14le";
+       break;
+     case V4L2_PIX_FMT_SGRBG16:
+-      bayer_format = "grbg16le";
++      bayer_format = "grbg16";
+       break;
+     case V4L2_PIX_FMT_SRGGB8:
+       bayer_format = "rggb";
+       break;
+     case V4L2_PIX_FMT_SRGGB10:
+-      bayer_format = "rggb10le";
++      bayer_format = "rggb10";
+       break;
+     case V4L2_PIX_FMT_SRGGB12:
+-      bayer_format = "rggb12le";
++      bayer_format = "rggb12";
+       break;
+     case V4L2_PIX_FMT_SRGGB14:
+       bayer_format = "rggb14le";
+       break;
+     case V4L2_PIX_FMT_SRGGB16:
+-      bayer_format = "rggb16le";
++      bayer_format = "rggb16";
+       break;
+     case V4L2_PIX_FMT_SRGGI10:
+     case V4L2_PIX_FMT_SGRIG10:
+@@ -1957,21 +1961,29 @@ gst_v4l2_object_get_caps_info (GstV4l2Object * v4l2object, GstCaps * caps,
+         fourcc = V4L2_PIX_FMT_SGRBG8;
+       else if (!g_ascii_strcasecmp (format, "rggb"))
+         fourcc = V4L2_PIX_FMT_SRGGB8;
+-      else if (!g_ascii_strcasecmp (format, "bggr10le"))
++      else if (!g_ascii_strcasecmp (format, "bggr10") ||
++          !g_ascii_strcasecmp (format, "bggr10le"))
+         fourcc = V4L2_PIX_FMT_SBGGR10;
+-      else if (!g_ascii_strcasecmp (format, "gbrg10le"))
++      else if (!g_ascii_strcasecmp (format, "gbrg10") ||
++          !g_ascii_strcasecmp (format, "gbrg10le"))
+         fourcc = V4L2_PIX_FMT_SGBRG10;
+-      else if (!g_ascii_strcasecmp (format, "grbg10le"))
++      else if (!g_ascii_strcasecmp (format, "grbg10") ||
++          !g_ascii_strcasecmp (format, "grbg10le"))
+         fourcc = V4L2_PIX_FMT_SGRBG10;
+-      else if (!g_ascii_strcasecmp (format, "rggb10le"))
++      else if (!g_ascii_strcasecmp (format, "rggb10") ||
++          !g_ascii_strcasecmp (format, "rggb10le"))
+         fourcc = V4L2_PIX_FMT_SRGGB10;
+-      else if (!g_ascii_strcasecmp (format, "bggr12le"))
++      else if (!g_ascii_strcasecmp (format, "bggr12") ||
++          !g_ascii_strcasecmp (format, "bggr12le"))
+         fourcc = V4L2_PIX_FMT_SBGGR12;
+-      else if (!g_ascii_strcasecmp (format, "gbrg12le"))
++      else if (!g_ascii_strcasecmp (format, "gbrg12") ||
++          !g_ascii_strcasecmp (format, "gbrg12le"))
+         fourcc = V4L2_PIX_FMT_SGBRG12;
+-      else if (!g_ascii_strcasecmp (format, "grbg12le"))
++      else if (!g_ascii_strcasecmp (format, "grbg12") ||
++          !g_ascii_strcasecmp (format, "grbg12le"))
+         fourcc = V4L2_PIX_FMT_SGRBG12;
+-      else if (!g_ascii_strcasecmp (format, "rggb12le"))
++      else if (!g_ascii_strcasecmp (format, "rggb12") ||
++          !g_ascii_strcasecmp (format, "rggb12le"))
+         fourcc = V4L2_PIX_FMT_SRGGB12;
+       else if (!g_ascii_strcasecmp (format, "bggr14le"))
+         fourcc = V4L2_PIX_FMT_SBGGR14;
+@@ -1981,13 +1993,17 @@ gst_v4l2_object_get_caps_info (GstV4l2Object * v4l2object, GstCaps * caps,
+         fourcc = V4L2_PIX_FMT_SGRBG14;
+       else if (!g_ascii_strcasecmp (format, "rggb14le"))
+         fourcc = V4L2_PIX_FMT_SRGGB14;
+-      else if (!g_ascii_strcasecmp (format, "bggr16le"))
++      else if (!g_ascii_strcasecmp (format, "bggr16") ||
++          !g_ascii_strcasecmp (format, "bggr16le"))
+         fourcc = V4L2_PIX_FMT_SBGGR16;
+-      else if (!g_ascii_strcasecmp (format, "gbrg16le"))
++      else if (!g_ascii_strcasecmp (format, "gbrg16") ||
++          !g_ascii_strcasecmp (format, "gbrg16le"))
+         fourcc = V4L2_PIX_FMT_SGBRG16;
+-      else if (!g_ascii_strcasecmp (format, "grbg16le"))
++      else if (!g_ascii_strcasecmp (format, "grbg16") ||
++          !g_ascii_strcasecmp (format, "grbg16le"))
+         fourcc = V4L2_PIX_FMT_SGRBG16;
+-      else if (!g_ascii_strcasecmp (format, "rggb16le"))
++      else if (!g_ascii_strcasecmp (format, "rggb16") ||
++          !g_ascii_strcasecmp (format, "rggb16le"))
+         fourcc = V4L2_PIX_FMT_SRGGB16;
+       else if (!g_ascii_strcasecmp (format, "rggi10"))
+         fourcc = V4L2_PIX_FMT_SRGGI10;

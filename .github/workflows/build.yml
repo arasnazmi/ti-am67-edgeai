@@ -1,0 +1,181 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the run it makes obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SDK_VER: "11_00_00"
+
+# Everything runs on native arm64 runners. Building the arm64 image on x86
+# runners goes through QEMU, which is ~10x slower and crashes cc1plus.
+#
+# The packages are built once for each Ubuntu release in the `ubuntu` matrix,
+# each in a builder image of that release. Their file names carry the release,
+# so the release job can put both sets into one GitHub release.
+jobs:
+  image:
+    name: Builder image (Ubuntu ${{ matrix.ubuntu }})
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["22.04", "24.04"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/builder-image
+        with:
+          ubuntu-version: ${{ matrix.ubuntu }}
+          tag: ti-am67-edgeai:${{ matrix.ubuntu }}
+          save-cache: "true"
+
+  # Independent components build in parallel, one runner each. TIDL only needs
+  # the vision_apps package, so it runs right after vision_lib in the same job.
+  component:
+    name: ${{ matrix.component.name }} (Ubuntu ${{ matrix.ubuntu }})
+    needs: image
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 240
+    env:
+      BUILDER_IMAGE: ti-am67-edgeai:${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["22.04", "24.04"]
+        component:
+          - name: vision_lib+tidl
+            run: task build:vision_lib && task install:debs && task build:tidl
+          - name: onnxrt
+            run: task build:onnxrt
+          - name: tflite
+            run: task build:tflite
+          - name: dlr
+            run: task build:dlr
+          - name: gstreamer
+            run: task build:gstreamer
+          - name: v4l2
+            run: task build:v4l2
+          - name: rpmsg
+            run: task build:rpmsg
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/builder-image
+        with:
+          ubuntu-version: ${{ matrix.ubuntu }}
+          tag: ${{ env.BUILDER_IMAGE }}
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.ubuntu }}-${{ matrix.component.name }}-${{ github.run_id }}
+          restore-keys: ccache-${{ matrix.ubuntu }}-${{ matrix.component.name }}-
+
+      - name: Build
+        run: .github/scripts/in-builder.sh 'mkdir -p out workarea && ${{ matrix.component.run }}'
+
+      # Saved even when the build fails, so the next attempt starts warm.
+      # Pull requests only read the cache that main writes.
+      - name: Save ccache
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.ubuntu }}-${{ matrix.component.name }}-${{ github.run_id }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pkg-${{ matrix.ubuntu }}-${{ matrix.component.name }}
+          path: |
+            out/*.deb
+            out/*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+  package:
+    name: edgeai packages (Ubuntu ${{ matrix.ubuntu }})
+    needs: component
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    env:
+      BUILDER_IMAGE: ti-am67-edgeai:${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["22.04", "24.04"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/builder-image
+        with:
+          ubuntu-version: ${{ matrix.ubuntu }}
+          tag: ${{ env.BUILDER_IMAGE }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: pkg-${{ matrix.ubuntu }}-*
+          path: out
+          merge-multiple: true
+
+      - name: Build
+        run: .github/scripts/in-builder.sh 'mkdir -p workarea && task build:edgeai_debs && task build:t3_gem_o1_edgeai_debs'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ti-am67-edgeai-packages-ubuntu-${{ matrix.ubuntu }}
+          path: |
+            out/*.deb
+            out/*.whl
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Release
+    if: github.ref_type == 'tag'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # One directory per release: dist/ti-am67-edgeai-packages-ubuntu-<release>
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ti-am67-edgeai-packages-ubuntu-*
+          path: dist
+
+      # Besides the single files, one zip per Ubuntu release with all of its
+      # .deb packages, to install them in one go: unzip, then
+      # `sudo apt install ./*.deb`. The .deb files are compressed already, so
+      # the zip only stores them.
+      - name: Zip the packages of each Ubuntu release
+        run: |
+          mkdir -p out
+          for dir in dist/ti-am67-edgeai-packages-ubuntu-*; do
+            release="${dir##*-ubuntu-}"
+            zip_name="ti-am67-edgeai-${GITHUB_REF_NAME}-ubuntu-${release}-arm64.zip"
+            (cd "${dir}" && zip -q -0 "${GITHUB_WORKSPACE}/out/${zip_name}" ./*.deb)
+            cp "${dir}"/*.deb "${dir}"/*.whl out/
+            echo "${zip_name}:"
+            unzip -l "out/${zip_name}"
+          done
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            out/*.zip
+            out/*.deb
+            out/*.whl

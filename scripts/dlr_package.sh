@@ -41,7 +41,12 @@ log_info "Python dir : ${PYTHON_DIR}"
 log_info "Output dir : ${OUT_DIR}"
 
 cd "${PYTHON_DIR}"
-python3 setup.py bdist_wheel
+# The wheel carries libdlr.so, built for this image's architecture and C
+# library. Tag it with the Python and platform it was built for, as with the
+# other wheels, instead of py3-none-any, so that the wheels built for different
+# Ubuntu releases neither have the same name nor install on the wrong one.
+python_tag=$(python3 -c 'import sys; print("cp%d%d" % sys.version_info[:2])')
+python3 setup.py bdist_wheel --python-tag "${python_tag}" --plat-name linux_aarch64
 
 log_info "Searching for built wheel in: ${DIST_DIR}"
 whl_path=$(find "${DIST_DIR}" -name "dlr-*.whl" | head -n 1)

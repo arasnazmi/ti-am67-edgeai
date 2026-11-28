@@ -59,6 +59,19 @@ fi
 copy_and_backup "${PATCH_SRC}" "${PATCH_DST}"
 log_success "Patch applied: $(basename "${PATCH_DST}")"
 
+# --- Add a Missing Include ---
+# spectrogram.cc uses uint32_t without including <cstdint>. GCC 11 (Ubuntu
+# 22.04) happens to declare it through the other headers, GCC 13 (Ubuntu 24.04)
+# does not. Later TensorFlow versions include it; do the same.
+SPECTROGRAM_CC="${TF_DIR}/tensorflow/lite/kernels/internal/spectrogram.cc"
+if ! grep -q '^#include <cstdint>$' "${SPECTROGRAM_CC}"; then
+    sed -i '/^#include <math.h>$/a #include <cstdint>' "${SPECTROGRAM_CC}"
+fi
+if ! grep -q '^#include <cstdint>$' "${SPECTROGRAM_CC}"; then
+    log_error "Could not add #include <cstdint> to: ${SPECTROGRAM_CC}"
+    exit 1
+fi
+
 # --- Post-setup Permissions ---
 # Grant write access to all users under the workarea (required for CI/CD consumers)
 chmod -R a+w "${WORKAREA}"

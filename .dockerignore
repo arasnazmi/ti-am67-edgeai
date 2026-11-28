@@ -1,0 +1,9 @@
+# The image only COPYs .bash_completion.d/. Keep the multi-GB build trees out of
+# the build context so `docker build` does not upload them every time.
+.git/
+workarea/
+out/
+build/
+.ccache/
+.cache/
+.cmake/

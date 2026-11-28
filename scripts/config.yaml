@@ -1,5 +1,8 @@
 # PSDK-Linux for EdgeAI: 10.01.00.03
 
+# A repository can override any of its settings for one Ubuntu release, in a
+# key named after the release (jammy, noble). See get_yaml_value in utils.sh.
+
 # Below are for osrt-libs-build. References:
 # https://git.ti.com/cgit/edgeai/meta-edgeai/tree/recipes-tisdk/ti-tidl/ti-tidl.bb?h=scarthgap
 # https://git.ti.com/cgit/edgeai/meta-edgeai/tree/recipes-tisdk/ti-tidl/ti-tidl-osrt.bb?h=scarthgap
@@ -52,11 +55,17 @@ ti-rpmsg-char:
   branch: "master"
   commit: "5100a2e4a4a951e40ea0708fa78960770ec0ac33"
 
+# t3-gstreamer goes to /usr/local, where it takes precedence over the
+# distribution's GStreamer, so it must not be older than that one. Ubuntu
+# 24.04 has 1.24.2.
 gstreamer:
   url: "https://gitlab.freedesktop.org/gstreamer/gstreamer"
   tag: "None"
   branch: "1.22.12"
   commit: "d2c02bb704b5804ca057fc7e6c7b16b4466fd7d5"
+  noble:
+    branch: "1.24.13"
+    commit: "0a7d7071207d40cc003f6cd9f2f123f759fdfce1"
 
 v4l2-utils:
   url: "git://git.linuxtv.org/v4l-utils.git"
@@ -68,4 +77,4 @@ edgeai-app-stack:
   url: "https://github.com/t3gemstone/edgeai-app-stack.git"
   tag: "None"
   branch: "11_00_00"
-  commit: "81755e9efe299710c649b96df3c1f199708d3191"
+  commit: "c55da766ebd5d9eed87ac21205721d34d7da1251"

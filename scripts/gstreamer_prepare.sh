@@ -18,21 +18,10 @@ if [ ! -f "${UTILS_SCRIPT}" ]; then
     exit 1
 fi
 source "${UTILS_SCRIPT}"
+source "${WORKDIR}/scripts/build_common.sh"
 
 WORKAREA="${WORKDIR}/workarea"
 GST_PLUGINS_DIR="${WORKAREA}/gstreamer/subprojects/gst-plugins-good"
-
-PATCH_BASE_URL="https://git.ti.com/cgit/arago-project/meta-arago/plain/meta-arago-extras/recipes-multimedia/gstreamer/gstreamer1.0-plugins-good"
-PATCH_BRANCH="scarthgap"
-
-PATCH_FILES=(
-    "0001-Adding-support-for-raw10-raw12-and-raw16-bayer-formats.patch"
-    "0001-v4l2jpegenc-Add-support-for-cropping-in-JPEG-Encoder.patch"
-    "0002-Adding-support-for-bayer-formats-with-IR-component.patch"
-    "0003-v4l2-Changes-for-DMA-Buf-import-j721s2.patch"
-    "0004-v4l2-Give-preference-to-contiguous-format-if-support.patch"
-    "0005-HACK-gstv4l2object-Increase-min-buffers-for-CSI-capt.patch"
-)
 
 SECONDS=0
 
@@ -42,6 +31,7 @@ extract_repo_info "gstreamer"
 
 rm -rf "${WORKAREA}/gstreamer"
 
+mkdir -p "${WORKAREA}"
 cd "${WORKAREA}"
 clone_repo "$repo_url" "$repo_tag" "$repo_branch" "$repo_commit" gstreamer
 log_success "GStreamer cloned."
@@ -55,32 +45,33 @@ fi
 
 cd "${GST_PLUGINS_DIR}"
 
-total=${#PATCH_FILES[@]}
+# Each GStreamer version has its gst-plugins-good patches in
+# patches/gstreamer/<version>, applied in file name order. 1.22.12 has TI's
+# own, unchanged from meta-arago (scarthgap, commit dd1b7f9b85c0); they are
+# kept here because git.ti.com often fails from the CI runners. TI publishes
+# none for 1.24, so 1.24.13 has TI's rebased to it, and what the TI
+# applications need on top.
+LOCAL_PATCH_DIR="${WORKDIR}/patches/gstreamer/${repo_branch}"
+
+if [ ! -d "${LOCAL_PATCH_DIR}" ]; then
+    log_error "No gst-plugins-good patches for GStreamer ${repo_branch}: ${LOCAL_PATCH_DIR} not found"
+    exit 1
+fi
+
+log_info "Using the patches in: ${LOCAL_PATCH_DIR}"
+patch_paths=("${LOCAL_PATCH_DIR}"/*.patch)
+
+total=${#patch_paths[@]}
 index=0
 
-for patch_file in "${PATCH_FILES[@]}"; do
+for patch_path in "${patch_paths[@]}"; do
     index=$(( index + 1 ))
-    patch_url="${PATCH_BASE_URL}/${patch_file}?h=${PATCH_BRANCH}"
 
-    log_info "[${index}/${total}] Downloading: ${patch_file}"
-
-    while true :
-    do
-        if ! wget --quiet --show-progress -O "${patch_file}" "${patch_url}";
-        then
-            log_info "Download failed: ${patch_url}. Retrying in 3 seconds..."
-            sleep 3
-            continue
-        else
-            log_info "[${index}/${total}] Applying: ${patch_file}"
-            if ! patch -p1 < "${patch_file}"; then
-                log_error "Failed to apply patch: ${patch_file}"
-                exit 1
-            fi
-            break
-        fi
-    done
-
+    log_info "[${index}/${total}] Applying: $(basename "${patch_path}")"
+    if ! patch -p1 < "${patch_path}"; then
+        log_error "Failed to apply patch: ${patch_path}"
+        exit 1
+    fi
 done
 
 duration=${SECONDS}
